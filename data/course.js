@@ -66,13 +66,14 @@ window.DERS_BOLUMLERI = [
     [
       ['Yazmaçtan diske', 'Yazmaçlar ve önbellek hızlı ve küçüktür. RAM çalışma kümesini tutar. HDD ve SSD veriyi güç kesildiğinde de saklar. RAM kapasitesi çalışma kümesine yetmezse, depolamaya daha sık başvurmak gerekebilir.'],
       ['HDD, SATA SSD ve NVMe', 'HDD’de mekanik konumlanma maliyeti vardır. SSD’de bu hareket yoktur. SATA ile PCIe üzerinden çalışan NVMe, bağlantı ve istekleri işleme biçimlerinde farklılaşır. Uçtan uca aktarım, cihazın ve bağlantının kapasitesiyle sınırlıdır.'],
-      ['CPU, GPU ve G/Ç', 'GPU çok sayıda benzer işlemi paralel yürütür. Bütünleşik GPU çoğunlukla sistem belleğini paylaşır. Ayrık GPU genellikle kendi belleğini kullanır. Küçük bir işte veriyi hazırlama ve aktarma maliyeti, GPU’da hesaplama kazancını aşabilir.'],
+      ['CPU ve GPU', 'GPU çok sayıda benzer işlemi paralel yürütür. Bütünleşik GPU çoğunlukla sistem belleğini paylaşır. Ayrık GPU genellikle kendi belleğini kullanır. Küçük bir işte veriyi hazırlama ve aktarma maliyeti, GPU’da hesaplama kazancını aşabilir.'],
+      ['G/Ç denetleyicisi, tampon, kesme ve DMA', 'Denetleyici işlemci ile aygıt arasındaki iletişimi yönetir. Tampon, farklı hızlarda çalışan iki taraf arasındaki veriyi geçici olarak tutar. Kesme bir olayın gerçekleştiğini CPU’ya bildirir. DMA ile denetleyici, CPU’nun her sözcüğü tek tek taşımasına gerek kalmadan aygıt ile bellek arasında blok aktarabilir.'],
     ],
     ['Hızlı bir NVMe SSD, daha dar bir bağlantıda çalışıyor.', 'Dosyayı okuyan uygulamanın hızı sadece SSD’nin etiketindeki değerle belirlenmez.', 'Disk, bağlantı, RAM ve işlem aşamalarından en yavaş olanı toplam aktarımı sınırlayabilir.']),
   unit('fiziksel-sinirlar-ve-onbellek', 2, [30, 40], 'Isı, bellek duvarı ve önbelleğin çalışma mantığı',
     'Daha fazla transistör tek başına daha kısa çalışma süresi getirmez. Sinyalin ilerleme süresi, enerji ve veriye erişim hızı da tasarımı sınırlar.',
     [
-      ['Moore eğilimi, güç ve RC gecikmesi', 'Entegrasyon arttıkça aynı yongaya daha fazla devre sığar. Anahtarlama enerji tüketir ve ısı üretir. Bir bağlantının direnci ve kapasitansı sinyalin yerleşmesini geciktirir. Uzun veya yoğun bağlantılarda bu RC etkisi çevrim hedefini sınırlayabilir.'],
+      ['Moore eğilimi, güç ve RC gecikmesi', 'Moore yasasının yaygın tarihsel ifadesi, çipteki transistör sayısının yaklaşık iki yılda ikiye katlanmasıdır. Daha çok transistör, daha çok devreye yer açar. Anahtarlama enerji tüketir ve ısı üretir. Bir bağlantının direnci ve kapasitansı sinyalin yerleşmesini geciktirir. Uzun veya yoğun bağlantılarda bu RC etkisi çevrim hedefini sınırlayabilir.'],
       ['Bellek duvarı ve aktarım ölçüleri', 'CPU ilerlerken ana belleğe erişim süresi aynı oranda kısalmayabilir. Gecikme ilk verinin gelmesine kadar bekleyiştir. Bant genişliği sürdürülebilir aktarım miktarıdır. Örneğin 64 bit yol, bir aktarımda 8 bayt taşır. Aktarım sayısı verilmeden bayt/s bulunamaz.'],
       ['Yerellik ve bloklar', 'Önbellek bellekteki veriyi bloklar halinde getirir. Bir veri tekrar kullanılıyorsa zamansal yerellik, yakın adreslere erişiliyorsa mekânsal yerellik vardır. Aranan blok ilgili düzeyde bulunursa isabet, bulunmazsa kaçırma olur.'],
     ],
@@ -111,7 +112,7 @@ window.DERS_BOLUMLERI = [
   unit('frekans-ve-cevrim-suresi', 3, [12, 18], 'Saat frekansından çevrim süresini bulmak',
     'Frekans saniyede kaç çevrim olduğunu, çevrim süresi ise tek bir çevrimin kaç saniye sürdüğünü söyler.',
     [
-      ['Birimleri yerleştir', '1 MHz = 10⁶ Hz ve 1 GHz = 10⁹ Hz. 1 ns = 10⁻⁹ s. Frekans çevrim/s, çevrim süresi s/çevrim birimindedir. Bu yüzden T_çevrim = 1 / f.'],
+      ['Birimleri yerleştir', '1 kHz = 10³ Hz, 1 MHz = 10⁶ Hz ve 1 GHz = 10⁹ Hz. Zaman tarafında 1 ms = 10⁻³ s, 1 µs = 10⁻⁶ s ve 1 ns = 10⁻⁹ s. Frekans çevrim/s, çevrim süresi s/çevrim birimindedir. Bu yüzden T_çevrim = 1 / f.'],
       ['Hızlı kontrol', '1 GHz tam 1 ns/çevrimdir. Frekans ikiye katlanırsa çevrim süresi yarıya düşer. Ancak komut sayısı veya CPI da değişiyorsa toplam sürenin aynı oranda değişeceği söylenemez.'],
     ],
     ['2,5 GHz’lik bir işlemcinin bir çevrimi ne kadar sürer?', 'f = 2,5 × 10⁹ çevrim/s.', 'T = 1 / (2,5 × 10⁹) = 0,4 × 10⁻⁹ s = 0,4 ns/çevrim.']),
@@ -120,7 +121,8 @@ window.DERS_BOLUMLERI = [
     [
       ['CPU performans denklemi', 'Toplam çevrim = komut sayısı × ortalama CPI. CPU süresi = toplam çevrim / f. Komut sayısı burada çalışma sırasında gerçekten yürütülen komutlardır. Örneğin 20 defa dönen bir döngüde gövde tekrar tekrar sayılır.'],
       ['Farklı komutlar farklı çevrim tüketir', 'Her sınıfın komut sayısını kendi CPI değeriyle çarp ve katkıları topla. Ortalama CPI, toplam çevrimin toplam komuta bölümüdür. Oran verilmişse ağırlıklı toplamı doğrudan hesaplayabilirsin.'],
-      ['Değişen tasarımı karşılaştır', 'Derleyici ve ISA hem komut sayısını hem karışımı değiştirebilir. Bir işlemcinin frekansı yüksek olsa bile daha çok çevrim harcayabilir. İstenen bilinmeyeni denklemde yalnız bırak ve tüm değerleri aynı birimlerle yaz.'],
+      ['Bilinmeyeni yalnız bırak', 'T süre, f frekans ve I yürütülen komut sayısı olsun. T = I × CPI / f denkleminden I = T × f / CPI, CPI = T × f / I ve f = I × CPI / T çıkar. Birim kontrolü yap: komut × çevrim/komut ÷ çevrim/s = s.'],
+      ['Değişen tasarımı karşılaştır', 'Derleyici ve ISA hem komut sayısını hem karışımı değiştirebilir. Frekansı yüksek işlemci daha çok çevrim harcayabilir. İki işlemciyi karşılaştırırken her biri için süreyi kendi I, CPI ve f değerleriyle hesapla.'],
     ],
     ['100 milyon komutun %70’i 1 CPI, %30’u 3 CPI. Frekans 2 GHz.', 'Ortalama CPI = 0,70 × 1 + 0,30 × 3 = 1,6.', 'Toplam çevrim = 160 × 10⁶. CPU süresi = 160 × 10⁶ / (2 × 10⁹) = 0,08 s.'],
     ['Aynı 160 milyon çevrimi 40 ms’de tamamlamak için kaç GHz gerekir?', '40 ms = 0,04 s. f = 160 × 10⁶ / 0,04 = 4 GHz.']),
@@ -143,7 +145,7 @@ window.DERS_BOLUMLERI = [
     'Problemin hangi maliyeti verdiğini belirle. Komut sınıfı başına nanosaniye, CPI ve fiyat birbirinden farklı büyüklüklerdir.',
     [
       ['Gibson karışımı', 'Komut sınıfının görülme oranını o sınıfın yürütme süresiyle çarp. Ağırlıklı toplam komut başına ortalama süredir. Toplamı bulmak için bunu yürütülen komut sayısıyla çarp. Sınıf maliyeti çevrim olarak verilmişse önce ortalama CPI’ı bulmuş olursun.'],
-      ['Grosch kanunu', 'Sunumdaki tarihsel model hızı maliyetin kuvvetiyle ilişkilendirir: V = K × Cᵐ. Bu gözlemsel yaklaşım, bir programın CPU süresini hesaplamak için kullanılan denklemden farklı bir soruya cevap verir.'],
+      ['Grosch kanunu', 'Sunumdaki tarihsel model hızı maliyetin kuvvetiyle ilişkilendirir. V = K × Cᵐ ifadesinde V hız, C maliyet, K sabit ve m yaklaşık 1 ile 2 arasındaki üstür. m = 2 varsayımında maliyet ikiye çıkınca model dört kat hız öngörür. Bu tarihsel ilişki güncel sistemlerde evrensel tahmin kuralı olarak kullanılamaz.'],
       ['Sorudan formüle', 'Çevrim ve GHz verilirse süreyi bölümle bul. Saniyedeki milyon komut istenirse MIPS kullan. Yalnızca bir kısım iyileşiyorsa Amdahl ile yeni süreyi bul. Hızlanma ile yüzde süre azalmasını ayrı yaz.'],
     ],
     ['Komutların %50’si 2 ns, %30’u 5 ns, %20’si 10 ns. Toplam 1 milyon komut var.', 'Ortalama = 0,50 × 2 + 0,30 × 5 + 0,20 × 10 = 4,5 ns/komut.', '1 milyon × 4,5 ns = 4,5 ms.']),
@@ -152,7 +154,8 @@ window.DERS_BOLUMLERI = [
     'Komut kümesi mimarisi (ISA), makine kodunun işlemciden bekleyebileceği davranışı tarif eder.',
     [
       ['Makine kodu, assembly ve mikromimari', 'Makine kodu komutların bit gösterimidir. Assembly, bu bitlerin ADD gibi okunabilir adlarla ifade edilmesidir. Mikromimari, ISA’yı gerçekleştiren önbellek, yürütme birimleri ve boru hattı gibi iç düzendir.'],
-      ['Programcının görebildiği durum', 'ISA komutları, veri türlerini, yazmaçları, adresleme biçimlerini ve istisnaları tanımlar. Genel amaçlı yazmaçlar operand tutar. PC komut akışını, yığın işaretçisi yığının konumunu gösterir. Bazı ISA’larda sıfır, negatif, taşıma ve taşma gibi sonuçlar koşul bayraklarına yansır.'],
+      ['Programcının görebildiği durum', 'ISA, işaretli ve işaretsiz tamsayı, bit dizisi, kayan nokta, vektör ve adres gibi değerlerin nasıl işlendiğini tanımlar. Genel amaçlı yazmaçlar operand tutar. PC komut akışını, SP yığının konumunu gösterir. Kayan nokta veya vektör işlemlerinin ayrı yazmaçları olabilir.'],
+      ['Koşul bayrakları', 'Bayrak kullanan ISA’larda Z sıfırı, N/S işaret bitini, C taşıma veya mimariye göre ödünç bilgisini, V/O işaretli taşmayı gösterir. Bazı ISA’lar ayrı karşılaştırma komutuyla bir yazmaca sonuç yazar ya da iki değeri doğrudan dallanma komutunda karşılaştırır.'],
       ['Ayrıcalık ve tasarım dengesi', 'Bellek yönetimi gibi kritik işler ayrıcalıklı komutlara ayrılabilir. Komut kodlaması da bir dengedir. Uzun kod daha fazla alan bırakabilir, daha düzenli biçimler çözmeyi kolaylaştırabilir.'],
     ],
     ['Aynı ISA’ya sahip iki işlemcinin birinde daha büyük önbellek var.', 'Program aynı ADD kodlamasını ve sonucunu görür.', 'Önbelleğin boyutu ve yürütme süresi işlemcinin uygulamasına bağlıdır.']),
@@ -260,8 +263,9 @@ window.DERS_BOLUMLERI = [
     'Bir işlemde önce bit sonucunu, sonra taşma bayrağını, en son bu bayrağa işlemci veya dilin nasıl tepki verdiğini düşün.',
     [
       ['Aynı devre ile iki işlem', 'Bir seçim sinyali B bitlerini olduğu gibi veya tersleyerek toplayıcıya verir. Çıkarma seçildiğinde giriş eldesi 1 olur. İkinin tümleyeninde işaretli taşma, en üst bite giren elde ile oradan çıkan eldenin XOR’uyla da belirlenebilir.'],
-      ['MIPS32 ve programlama dilleri', 'MIPS32’de ADD ve SUB işaretli taşmada istisna üretebilir. ADDU ve SUBU düşük 32 biti verir. Bir programlama dilinde taşma davranışını dilin sayı türü ve kuralları belirler. İşlemci sarılması, her dilde aynı davranışın görüleceğini garanti etmez.'],
-      ['Çarpmaya geçiş', 'Sabit genişlikli iki n bit operandın tam çarpımı en fazla 2n bit gerektirebilir. Donanımsal çarpma kaydırma ve toplamadan yararlanır. Booth yaklaşımı, art arda gelen 1 bitlerini uygun toplama ve çıkarma adımlarıyla ele alır.'],
+      ['MIPS32 ve temel RISC-V', 'MIPS32’de ADD ve SUB işaretli taşmada istisna üretir. ADDU ve SUBU düşük 32 biti bırakır. Temel RISC-V’nin ADD ve SUB komutları da düşük yazmaç genişliğini bırakır ve otomatik aritmetik taşma istisnası üretmez.'],
+      ['Programlama dilinin kuralı', 'İşlemci düşük bitleri üretse bile C ve C++’ta işaretli tamsayı taşması tanımsız davranıştır. Sınır güvenliği gerekiyorsa işlemi yapmadan önce denetle, daha geniş bir tür kullan veya dilin denetimli aritmetik yolunu kullan.'],
+      ['Çarpmaya geçiş', 'Sabit genişlikli iki n bit operandın tam çarpımı en fazla 2n bit gerektirebilir. Donanımsal çarpma kaydırma ve toplamadan yararlanır. İşaretli çarpımda işaret genişletme ve aritmetik sağa kaydırma işareti korur. Booth yaklaşımı, art arda gelen 1 bitlerini toplama ve çıkarma adımlarıyla ele alır.'],
     ],
     ['4 bitte 0101 + 0100 işlemini donanım açısından izle.', 'Düşük bitler 1001 olur. İşaret bitine elde 1 girer, dışarı elde 0 çıkar.', '1 XOR 0 = 1, yani işaretli taşma vardır. Sarılan işlem 1001’i saklar, taşma denetimli işlem ise istisna üretebilir.']),
 

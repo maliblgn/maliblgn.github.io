@@ -1,5 +1,6 @@
 const main = document.querySelector('#main');
 const lessons = window.DERS_BOLUMLERI;
+const courseDepth = window.DERS_AYRINTILARI;
 const questions = window.SORULAR;
 const lessonById = new Map(lessons.map(lesson => [lesson.id, lesson]));
 const examNoteById = new Map(window.DERSLER.map(lesson => [lesson.id, lesson]));
@@ -75,14 +76,19 @@ function home() {
     </section>`;
 }
 
-function lessonLink(lesson, current) {
-  return `<a href="${lessonHref(lesson)}" ${current === lesson.id ? 'aria-current="page"' : ''}>${esc(lesson.title)}</a>`;
+function lessonLink(lesson, current, depthOnly = false) {
+  return `<a href="${lessonHref(lesson)}${depthOnly ? '/ayrinti' : ''}" ${current === lesson.id && !depthOnly ? 'aria-current="page"' : ''}>${esc(lesson.title)}${depthOnly ? ' <small class="muted">· Ders ayrıntısında</small>' : ''}</a>`;
 }
 
 function buildTree(current) {
   return Array.from(lessonsByWeek, ([week, items]) => `<details ${week === current.week ? 'open' : ''}>
     <summary>${week ? week + '. Hafta · ' : ''}${esc(weeks[week][0])}</summary>
     <div class="subtree">${items.map(item => lessonLink(item, current.id)).join('')}</div></details>`).join('');
+}
+
+function renderTable(rows, label) {
+  const [head, ...body] = rows;
+  return `<div class="table-wrap" tabindex="0" role="region" aria-label="${esc(label)}"><table><thead><tr>${head.map(cell => `<th scope="col">${esc(cell)}</th>`).join('')}</tr></thead><tbody>${body.map(row => `<tr>${row.map(cell => `<td>${esc(cell)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
 }
 
 function examNoteContent(lesson) {
@@ -102,8 +108,7 @@ function examNoteContent(lesson) {
       while (blocks[i]?.type === 'row') rows.push(blocks[i++].cells);
       const table = rows.length > 1 && rows.every(row => row.length === rows[0].length);
       if (table) {
-        const [head, ...body] = rows;
-        html.push(`<div class="table-wrap" tabindex="0" role="region" aria-label="Ders tablosu"><table><thead><tr>${head.map(cell => `<th scope="col">${esc(cell)}</th>`).join('')}</tr></thead><tbody>${body.map(row => `<tr>${row.map(cell => `<td>${esc(cell)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`);
+        html.push(renderTable(rows, 'Ders tablosu'));
       } else {
         html.push(...rows.map(row => `<p>${row.map(esc).join(' · ')}</p>`));
       }
@@ -114,12 +119,17 @@ function examNoteContent(lesson) {
   return html.join('');
 }
 
-function courseContent(lesson) {
+function courseContent(lesson, openDepth) {
   const [problem, ...steps] = lesson.example;
+  const details = courseDepth[lesson.id];
   return `<p class="lesson-intro">${esc(lesson.intro)}</p>
     ${lesson.sections.map(([title, ...paragraphs]) => `<section class="lesson-section"><h3>${esc(title)}</h3>${paragraphs.map(paragraph => `<p>${esc(paragraph)}</p>`).join('')}</section>`).join('')}
     <section class="worked-example"><h3>Çözümlü örnek</h3><p>${esc(problem)}</p><ol>${steps.map(step => `<li>${esc(step)}</li>`).join('')}</ol></section>
-    ${lesson.check ? `<details class="self-check"><summary>Kendini dene</summary><p>${esc(lesson.check[0])}</p><details><summary>Yanıtı aç</summary><p>${esc(lesson.check[1])}</p></details></details>` : ''}`;
+    ${lesson.check ? `<details class="self-check"><summary>Kendini dene</summary><p>${esc(lesson.check[0])}</p><details><summary>Yanıtı aç</summary><p>${esc(lesson.check[1])}</p></details></details>` : ''}
+    ${details ? `<details class="course-depth" ${openDepth ? 'open' : ''}>
+      <summary id="depth-heading">Ayrıntılar ve ek örnekler <span>${details.length} konu</span></summary>
+      <div>${details.map(([title, explanation, table]) => `<section class="lesson-section"><h3>${esc(title)}</h3><p>${esc(explanation)}</p>${table ? renderTable(table, title) : ''}</section>`).join('')}</div>
+    </details>` : ''}`;
 }
 
 function pager(items, current, href, noun) {
@@ -133,7 +143,7 @@ function pager(items, current, href, noun) {
   </nav>`;
 }
 
-function showLesson(lesson) {
+function showLesson(lesson, openDepth) {
   const related = questions.filter(item => lessonByLegacyId.get(item.lessonId) === lesson);
   const weekLessons = lessonsByWeek.get(lesson.week);
   main.innerHTML = pageHead('Beş haftalık ders yolu', 'Konu Anlatımı', 'Bir konu seç. Anlatımı oku, ardından örneği adım adım çöz.') + `
@@ -149,7 +159,7 @@ function showLesson(lesson) {
       <article class="panel reading" aria-labelledby="lesson-title">
         <span class="tag">${groupByWeek(lesson.week)} · Ders ${weekLessons.indexOf(lesson) + 1} / ${weekLessons.length}</span>
         <h2 id="lesson-title" tabindex="-1">${esc(lesson.title)}</h2>
-        <div class="body lesson-body">${courseContent(lesson)}</div>
+        <div class="body lesson-body">${courseContent(lesson, openDepth)}</div>
         ${related.length ? `<div class="read-foot related"><strong>İlgili çıkmış sorular</strong> ${related.map(q => `<a class="button" href="${questionHref(q)}">${examName(q)} · ${q.number}${arrow}</a>`).join('')}</div>` : ''}
         <details class="sources"><summary>Ders kaynağı</summary><p>${lesson.week ? lesson.week + '.pdf · s. ' + lesson.pages.join('–') : 'Çıkmış vize ve final sorularıyla bağlantılı ek anlatım.'}</p></details>
         ${pager(lessons, lesson, lessonHref, 'ders')}
@@ -164,11 +174,17 @@ function showLesson(lesson) {
     results.hidden = !terms.length;
     tree.hidden = Boolean(terms.length);
     if (!terms.length) return;
-    const found = lessons.filter(item => {
+    const found = [];
+    for (const item of lessons) {
       const text = fold([item.title, item.intro, ...item.sections.flat(), ...item.example].join(' '));
-      return terms.every(term => text.includes(term));
-    });
-    results.innerHTML = `<p role="status">${found.length ? found.length + ' ders bulundu' : 'Eşleşen ders bulunamadı.'}</p>${found.map(item => lessonLink(item, lesson.id)).join('')}`;
+      if (terms.every(term => text.includes(term))) {
+        found.push(lessonLink(item, lesson.id));
+      } else {
+        const detailText = fold((courseDepth[item.id] ?? []).flat(Infinity).join(' '));
+        if (terms.every(term => (text + ' ' + detailText).includes(term))) found.push(lessonLink(item, lesson.id, true));
+      }
+    }
+    results.innerHTML = `<p role="status">${found.length ? found.length + ' ders bulundu' : 'Eşleşen ders bulunamadı.'}</p>${found.join('')}`;
   });
 }
 
@@ -266,14 +282,15 @@ function showSources() {
 }
 
 function render(navigation = false) {
-  const [screen, id] = location.hash.slice(1).split('/');
+  const [screen, id, part] = location.hash.slice(1).split('/');
+  const openDepth = screen === 'konu' && part === 'ayrinti';
   const current = { konu: 'lessons', soru: 'exams', kaynaklar: null }[screen] ?? (screen === 'kaynaklar' ? null : 'home');
   for (const name of ['home', 'lessons', 'exams']) {
     const link = document.querySelector('#nav-' + name);
     if (name === current) link.setAttribute('aria-current', 'page');
     else link.removeAttribute('aria-current');
   }
-  if (screen === 'konu') showLesson(lessonById.get(id) ?? lessonByLegacyId.get(id) ?? lessons[0]);
+  if (screen === 'konu') showLesson(lessonById.get(id) ?? lessonByLegacyId.get(id) ?? lessons[0], openDepth);
   else if (screen === 'soru') {
     const requested = questionById.get(id) ?? questions[0];
     if (!questionList().includes(requested)) {
@@ -284,7 +301,11 @@ function render(navigation = false) {
   } else if (screen === 'kaynaklar') showSources();
   else home();
 
-  if (navigation) {
+  const depthHeading = openDepth && document.querySelector('#depth-heading');
+  if (depthHeading) {
+    depthHeading.scrollIntoView({ block: 'start' });
+    if (navigation) depthHeading.focus({ preventScroll: true });
+  } else if (navigation) {
     window.scrollTo(0, 0);
     document.querySelector(screen === 'konu' ? '#lesson-title' : '#page-title')?.focus({ preventScroll: true });
   }
