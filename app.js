@@ -1,7 +1,8 @@
 const main = document.querySelector('#main');
-const lessons = window.DERSLER;
+const lessons = window.DERS_BOLUMLERI;
 const questions = window.SORULAR;
 const lessonById = new Map(lessons.map(lesson => [lesson.id, lesson]));
+const examNoteById = new Map(window.DERSLER.map(lesson => [lesson.id, lesson]));
 const questionById = new Map(questions.map(question => [question.id, question]));
 const weeks = {
   1: ['Mimari ve bilgisayarın gelişimi', 'Sistem bileşenleri, saklı program ve bilgisayar kuşakları'],
@@ -12,18 +13,25 @@ const weeks = {
   0: ['Ek vize konuları', 'Eski vizede sorulan ek kavramlar ve işlem modelleri'],
 };
 const weekOrder = [1, 2, 3, 4, 5, 0];
-const lessonGroups = new Map();
+const lessonsByWeek = new Map(weekOrder.map(week => [week, lessons.filter(lesson => lesson.week === week)]));
+const lessonByLegacyId = new Map();
 const state = { exam: '', topic: '', mobileTab: 'soru' };
 
-for (const week of weekOrder) {
-  const sections = new Map();
-  for (const lesson of lessons.filter(item => item.week === week)) {
-    if (!sections.has(lesson.section)) sections.set(lesson.section, new Map());
-    const topics = sections.get(lesson.section);
-    if (!topics.has(lesson.topic)) topics.set(lesson.topic, []);
-    topics.get(lesson.topic).push(lesson);
+for (const lesson of lessons.filter(item => item.week)) {
+  const [firstPage, lastPage] = lesson.pages;
+  for (let page = firstPage; page <= lastPage; page++) {
+    lessonByLegacyId.set('h' + lesson.week + '-s' + page, lesson);
   }
-  lessonGroups.set(week, sections);
+}
+const extraGroups = {
+  'ek-donanim-katmanlari': ['layers', 'logic'],
+  'ek-veri-yolu-ve-onbellek': ['bus', 'mdr', 'cache'],
+  'ek-flynn-ve-topolojiler': ['flynn', 'topology', 'shared'],
+  'ek-boru-hatti-hesaplari': ['stages', 'serial', 'spatial', 'pipe', 'superpipe', 'wide'],
+  'ek-frekans-karsilastirma': ['clock'],
+};
+for (const [id, aliases] of Object.entries(extraGroups)) {
+  for (const alias of aliases) lessonByLegacyId.set('extra-' + alias, lessonById.get(id));
 }
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({
@@ -44,22 +52,22 @@ function pageHead(kicker, title, description) {
 function home() {
   const cards = weekOrder.slice(0, 5).map(week => {
     const [title, subtitle] = weeks[week];
-    const list = lessons.filter(item => item.week === week);
-    return `<a class="week-card" href="${lessonHref(list[0])}"><span class="week-number">HAFTA 0${week}</span><h3>${esc(title)}</h3><p>${esc(subtitle)}</p><small>${list.length} başlık ${arrow}</small></a>`;
+    const list = lessonsByWeek.get(week);
+    return `<a class="week-card" href="${lessonHref(list[0])}"><span class="week-number">HAFTA 0${week}</span><h3>${esc(title)}</h3><p>${esc(subtitle)}</p><small>${list.length} ders ${arrow}</small></a>`;
   });
   main.innerHTML = `
     <section class="hero" aria-labelledby="page-title">
       <div><p class="eyebrow">Bilgisayar Mimarisi ve Organizasyonu</p>
         <h1 id="page-title" tabindex="-1">Vize Atölyesi</h1>
         <p>Beş haftayı adım adım öğren. Ardından konu notun yanında açıkken çıkmış soruları çöz.</p>
-        <div class="actions"><a class="button primary" href="#konu/h1-s2">Derse başla ${arrow}</a><a class="button secondary" href="#soru/v23-1">Çıkmış sorular</a></div>
+        <div class="actions"><a class="button primary" href="${lessonHref(lessons[0])}">Derse başla ${arrow}</a><a class="button secondary" href="#soru/v23-1">Çıkmış sorular</a></div>
       </div>
       <img src="board.svg" alt="" width="500" height="320">
     </section>
     <section aria-labelledby="course-title">
-      <div class="section-head"><div><p class="eyebrow">Ders yolu</p><h2 id="course-title">Beş haftada dersin temelleri</h2></div><p>${window.SLAYT_KAPSAMI.length} kaynak sayfa</p></div>
+      <div class="section-head"><div><p class="eyebrow">Ders yolu</p><h2 id="course-title">Beş haftada dersin temelleri</h2></div><p>${lessons.filter(lesson => lesson.week).length} konu dersi</p></div>
       <div class="weeks">${cards.join('')}</div>
-      <div class="strip"><div><strong>Çıkmış sorular için ek konu anlatımları</strong><p>Flynn, donanım katmanları ve boru hattı hesabı gibi eski sınav başlıklarını da çalış.</p></div><a class="button" href="#konu/extra-layers">Ek konuları aç ${arrow}</a></div>
+      <div class="strip"><div><strong>Çıkmış sorular için ek konu anlatımları</strong><p>Flynn, donanım katmanları ve boru hattı hesabı gibi eski sınav başlıklarını da çalış.</p></div><a class="button" href="${lessonHref(lessonsByWeek.get(0)[0])}">Ek konuları aç ${arrow}</a></div>
     </section>
     <section aria-labelledby="exam-title">
       <div class="section-head"><div><p class="eyebrow">Soru bankası</p><h2 id="exam-title">Sınavda Çıkmışlar</h2><p>2023 vizesi ve 2024 finalinin vize kapsamındaki soruları</p></div></div>
@@ -72,16 +80,12 @@ function lessonLink(lesson, current) {
 }
 
 function buildTree(current) {
-  return Array.from(lessonGroups, ([week, sections]) => `<details ${week === current.week ? 'open' : ''}>
-    <summary>${week ? '0' + week + ' · ' : ''}${esc(weeks[week][0])}</summary><div class="subtree">
-    ${Array.from(sections, ([section, topics]) => `<details ${week === current.week && section === current.section ? 'open' : ''}>
-      <summary>${esc(section)}</summary><div class="subtree">
-      ${Array.from(topics, ([topic, items]) => topic === section ? items.map(item => lessonLink(item, current.id)).join('') : `<details ${items.includes(current) ? 'open' : ''}><summary>${esc(topic)}</summary><div class="subtree">${items.map(item => lessonLink(item, current.id)).join('')}</div></details>`).join('')}
-      </div></details>`).join('')}
-    </div></details>`).join('');
+  return Array.from(lessonsByWeek, ([week, items]) => `<details ${week === current.week ? 'open' : ''}>
+    <summary>${week ? week + '. Hafta · ' : ''}${esc(weeks[week][0])}</summary>
+    <div class="subtree">${items.map(item => lessonLink(item, current.id)).join('')}</div></details>`).join('');
 }
 
-function lessonContent(lesson) {
+function examNoteContent(lesson) {
   const html = [];
   const blocks = lesson.blocks;
   for (let i = 0; i < blocks.length;) {
@@ -110,6 +114,14 @@ function lessonContent(lesson) {
   return html.join('');
 }
 
+function courseContent(lesson) {
+  const [problem, ...steps] = lesson.example;
+  return `<p class="lesson-intro">${esc(lesson.intro)}</p>
+    ${lesson.sections.map(([title, ...paragraphs]) => `<section class="lesson-section"><h3>${esc(title)}</h3>${paragraphs.map(paragraph => `<p>${esc(paragraph)}</p>`).join('')}</section>`).join('')}
+    <section class="worked-example"><h3>Çözümlü örnek</h3><p>${esc(problem)}</p><ol>${steps.map(step => `<li>${esc(step)}</li>`).join('')}</ol></section>
+    ${lesson.check ? `<details class="self-check"><summary>Kendini dene</summary><p>${esc(lesson.check[0])}</p><details><summary>Yanıtı aç</summary><p>${esc(lesson.check[1])}</p></details></details>` : ''}`;
+}
+
 function pager(items, current, href, noun) {
   const index = items.indexOf(current);
   const previous = items[index - 1];
@@ -122,22 +134,25 @@ function pager(items, current, href, noun) {
 }
 
 function showLesson(lesson) {
-  const related = questions.filter(item => item.lessonId === lesson.id);
-  const crumbs = [...new Set([groupByWeek(lesson.week), lesson.section, lesson.topic])].map(esc).join(' <span class="sep">/</span> ');
-  main.innerHTML = pageHead('Beş haftalık ders yolu', 'Konu Anlatımı', 'İçindekilerden bir başlık seç veya kavram adıyla ara.') + `
+  const related = questions.filter(item => lessonByLegacyId.get(item.lessonId) === lesson);
+  const weekLessons = lessonsByWeek.get(lesson.week);
+  main.innerHTML = pageHead('Beş haftalık ders yolu', 'Konu Anlatımı', 'Bir konu seç. Anlatımı oku, ardından örneği adım adım çöz.') + `
     <div class="lesson-grid">
       <aside class="panel sidebar" aria-label="Ders içindekileri">
-        <label for="lesson-search">Derslerde ara</label><input id="lesson-search" type="search" placeholder="Örn. çevrim süresi, taşma">
-        <nav id="tree" class="tree" aria-label="İçindekiler">${buildTree(lesson)}</nav>
-        <div id="search-results" class="tree search-results" hidden></div>
+        <details class="course-menu" ${matchMedia('(max-width: 750px)').matches ? '' : 'open'}>
+          <summary>Ders planı ve arama</summary>
+          <label for="lesson-search">Derslerde ara</label><input id="lesson-search" type="search" placeholder="Örn. çevrim süresi, taşma">
+          <nav id="tree" class="tree" aria-label="İçindekiler">${buildTree(lesson)}</nav>
+          <div id="search-results" class="tree search-results" hidden></div>
+        </details>
       </aside>
       <article class="panel reading" aria-labelledby="lesson-title">
-        <div class="crumbs">${crumbs}</div>
-        <span class="tag">${lesson.week ? lesson.week + '.pdf · sayfa ' + lesson.page : 'Ek vize konusu'}</span>
+        <span class="tag">${groupByWeek(lesson.week)} · Ders ${weekLessons.indexOf(lesson) + 1} / ${weekLessons.length}</span>
         <h2 id="lesson-title" tabindex="-1">${esc(lesson.title)}</h2>
-        <div class="body">${lessonContent(lesson)}</div>
+        <div class="body lesson-body">${courseContent(lesson)}</div>
         ${related.length ? `<div class="read-foot related"><strong>İlgili çıkmış sorular</strong> ${related.map(q => `<a class="button" href="${questionHref(q)}">${examName(q)} · ${q.number}${arrow}</a>`).join('')}</div>` : ''}
-        ${pager(lessons, lesson, lessonHref, 'başlık')}
+        <details class="sources"><summary>Ders kaynağı</summary><p>${lesson.week ? lesson.week + '.pdf · s. ' + lesson.pages.join('–') : 'Çıkmış vize ve final sorularıyla bağlantılı ek anlatım.'}</p></details>
+        ${pager(lessons, lesson, lessonHref, 'ders')}
       </article>
     </div>`;
 
@@ -150,16 +165,16 @@ function showLesson(lesson) {
     tree.hidden = Boolean(terms.length);
     if (!terms.length) return;
     const found = lessons.filter(item => {
-      const text = fold([item.title, item.section, item.topic, item.note, ...item.blocks.map(b => b.text ?? b.cells.join(' '))].join(' '));
+      const text = fold([item.title, item.intro, ...item.sections.flat(), ...item.example].join(' '));
       return terms.every(term => text.includes(term));
     });
-    results.innerHTML = `<p role="status">${found.length ? found.length + ' başlık bulundu' : 'Eşleşen başlık bulunamadı.'}</p>${found.map(item => lessonLink(item, lesson.id)).join('')}`;
+    results.innerHTML = `<p role="status">${found.length ? found.length + ' ders bulundu' : 'Eşleşen ders bulunamadı.'}</p>${found.map(item => lessonLink(item, lesson.id)).join('')}`;
   });
 }
 
 function questionList() {
   return questions.filter(question => (!state.exam || question.exam === state.exam)
-    && (!state.topic || sectionKey(lessonById.get(question.lessonId)) === state.topic));
+    && (!state.topic || sectionKey(examNoteById.get(question.lessonId)) === state.topic));
 }
 
 function showQuestion(requested) {
@@ -167,7 +182,7 @@ function showQuestion(requested) {
   const question = list.includes(requested) ? requested : list[0];
   const topics = new Map();
   for (const q of questions) {
-    const lesson = lessonById.get(q.lessonId);
+    const lesson = examNoteById.get(q.lessonId);
     topics.set(sectionKey(lesson), groupByWeek(lesson.week) + ' · ' + lesson.section);
   }
   const option = (value, title, selected) => `<option value="${esc(value)}" ${value === selected ? 'selected' : ''}>${esc(title)}</option>`;
@@ -210,7 +225,8 @@ function showQuestion(requested) {
 }
 
 function questionPanels(question, list) {
-  const lesson = lessonById.get(question.lessonId);
+  const lesson = examNoteById.get(question.lessonId);
+  const courseLesson = lessonByLegacyId.get(question.lessonId);
   return `<div class="tabs" role="group" aria-label="Gösterilecek panel">
     <button class="button" data-show-tab="soru" aria-pressed="${state.mobileTab === 'soru'}" aria-controls="question-panel">Soru</button>
     <button class="button" data-show-tab="konu" aria-pressed="${state.mobileTab === 'konu'}" aria-controls="context-panel">Konu</button>
@@ -219,8 +235,8 @@ function questionPanels(question, list) {
       <aside class="panel context" id="context-panel" aria-labelledby="context-title">
         <p class="eyebrow">Bu sorunun konusu · ${groupByWeek(lesson.week)}</p>
         <h2 id="context-title">${esc(lesson.title)}</h2>
-        <div class="body">${lessonContent(lesson)}</div>
-        <a class="button" href="${lessonHref(lesson)}">Ders ağacında aç ${arrow}</a>
+        <div class="body">${examNoteContent(lesson)}</div>
+        <a class="button" href="${lessonHref(courseLesson)}">Konunun tamamını aç ${arrow}</a>
       </aside>
       <article class="panel question" id="question-panel" aria-labelledby="question-title">
         <span class="tag">${examName(question)} · ${question.date}</span>
@@ -241,10 +257,10 @@ function showSources() {
       <p>2023 vizesinin her sayfası dört kopyadan karşılaştırıldı. 2024 finalinin vize kapsamındaki ilk 12 sorusu eklendi. Farklı sayılarla veya değişen seçeneklerle sorulan sorular ayrı kartlarda.</p>
       <div class="table-wrap" tabindex="0" role="region" aria-label="Sınav kapsamı tablosu"><table><thead><tr><th scope="col">Soru aralığı</th><th scope="col">Kaynak</th><th scope="col">Karar</th></tr></thead><tbody>${window.SINAV_KAPSAMI.map(row => `<tr><th scope="row">${esc(row.range)}</th><td>${row.files.map(esc).join('<br>')}</td><td>${esc(row.status)}</td></tr>`).join('')}</tbody></table></div>
       <h2>Slayt kapsamı</h2>
-      <p>Her kaynak sayfa bir ders başlığına veya belge bölümü kaydına bağlı.</p>
+      <p>326 kaynak sayfa, derslerin konu aralıklarına ve belge bölümlerine karşılık gelir.</p>
       ${weekOrder.slice(0, 5).map(week => {
-        const records = window.SLAYT_KAPSAMI.filter(item => item.week === week);
-        return `<details class="sources"><summary>${week}.pdf · ${records.length} sayfa</summary><ul>${records.map(record => `<li>Sayfa ${record.page} · ${record.lessonId ? `<a href="#konu/${record.lessonId}">${esc(lessonById.get(record.lessonId).title)}</a>` : record.status}</li>`).join('')}</ul></details>`;
+        const pageCount = window.SLAYT_KAPSAMI.filter(item => item.week === week).length;
+        return `<details class="sources"><summary>${week}.pdf · ${pageCount} sayfa</summary><ul><li>Sayfa 1 · Kapak</li>${lessonsByWeek.get(week).map(lesson => `<li>Sayfa ${lesson.pages.join('–')} · <a href="${lessonHref(lesson)}">${esc(lesson.title)}</a></li>`).join('')}<li>Sayfa ${pageCount} · Kapanış</li></ul></details>`;
       }).join('')}
     </div>`;
 }
@@ -257,7 +273,7 @@ function render(navigation = false) {
     if (name === current) link.setAttribute('aria-current', 'page');
     else link.removeAttribute('aria-current');
   }
-  if (screen === 'konu') showLesson(lessonById.get(id) ?? lessons[0]);
+  if (screen === 'konu') showLesson(lessonById.get(id) ?? lessonByLegacyId.get(id) ?? lessons[0]);
   else if (screen === 'soru') {
     const requested = questionById.get(id) ?? questions[0];
     if (!questionList().includes(requested)) {
@@ -270,7 +286,7 @@ function render(navigation = false) {
 
   if (navigation) {
     window.scrollTo(0, 0);
-    document.querySelector('#page-title')?.focus({ preventScroll: true });
+    document.querySelector(screen === 'konu' ? '#lesson-title' : '#page-title')?.focus({ preventScroll: true });
   }
 }
 

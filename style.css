@@ -66,6 +66,8 @@ main { min-height: 68vh; padding-block: 32px 45px; }
 .lesson-grid { display: grid; grid-template-columns: minmax(240px,310px) minmax(0,1fr); gap: 20px; align-items: start; }
 .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 15px; box-shadow: var(--shadow); min-width: 0; }
 .sidebar { padding: 15px; }
+.course-menu > summary { color: var(--ink); font-weight: 750; }
+.course-menu[open] > summary { margin-bottom: .8rem; }
 .sidebar label { display: block; font-size: .84rem; font-weight: 700; }
 input[type=search], select { border: 1px solid #b8c7cf; border-radius: 8px; background: #fff; min-height: 43px; padding: .52rem .7rem; width: 100%; color: var(--ink); }
 .tree { margin-top: 13px; max-height: 65vh; overflow: auto; padding: 3px; }
@@ -80,6 +82,16 @@ input[type=search], select { border: 1px solid #b8c7cf; border-radius: 8px; back
 .crumbs { color: var(--muted); font-size: .79rem; margin-bottom: 12px; overflow-wrap: anywhere; }
 .reading h2, .question h2 { margin: 4px 0 17px; line-height: 1.12; font-size: clamp(1.55rem,3vw,2.45rem); letter-spacing: -.04em; overflow-wrap: anywhere; }
 .reading .body { max-width: 78ch; }
+.lesson-body { line-height: 1.72; }
+.lesson-body .lesson-intro { font-size: 1.1rem; color: var(--muted); margin-bottom: 1.25em; }
+.lesson-section + .lesson-section { margin-top: 1.3rem; }
+.lesson-section h3, .worked-example h3 { font-size: 1.09rem; margin: 0 0 .25em; }
+.lesson-section p { margin-top: 0; }
+.worked-example { margin-top: 1.6rem; background: #edf8f4; border: 1px solid #c3e3d8; border-radius: 12px; padding: 1rem 1.2rem; }
+.worked-example ol { padding-left: 1.4em; margin: .55em 0 0; }
+.worked-example li + li { margin-top: .3em; }
+.self-check { margin-top: 1rem; border: 1px solid var(--border); border-radius: 8px; padding: .65rem .85rem; }
+.self-check summary { color: var(--accent); font-weight: 700; }
 .body p { margin: .7em 0; overflow-wrap: anywhere; }
 .body ul { margin: .55em 0 1em; padding-left: 1.25rem; }
 .body li { margin-block: .32rem; }
