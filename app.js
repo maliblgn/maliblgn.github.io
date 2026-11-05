@@ -147,6 +147,74 @@ function coursePractice(lesson) {
   </section>`;
 }
 
+function courseTests(lesson) {
+  const items = window.DERS_TESTLERI[lesson.id];
+  return `<section class="lesson-tests" aria-labelledby="test-heading">
+    <h3 id="test-heading">Konu testi · 5 soru</h3>
+    <p class="muted">Her soruda tek doğru seçenek var. Şıklarını işaretle, ardından cevaplarını kontrol et.</p>
+    <form id="lesson-test" data-lesson-id="${esc(lesson.id)}">
+      ${items.map((item, questionIndex) => `<fieldset class="test-question" data-question="${questionIndex}">
+        <legend>${questionIndex + 1}. ${esc(item.question)}</legend>
+        <div class="test-options">${item.choices.map((choice, choiceIndex) => `<label class="test-option">
+          <input type="radio" name="test-${questionIndex}" value="${choiceIndex}">
+          <span><b>${'ABCDE'[choiceIndex]}</b> ${esc(choice)}</span>
+        </label>`).join('')}</div>
+        <div class="test-feedback" role="status" hidden></div>
+      </fieldset>`).join('')}
+      <div class="actions"><button class="button primary" type="submit">Cevapları kontrol et</button><button class="button" type="reset">Testi sıfırla</button></div>
+      <p id="test-result" class="test-result" role="status" hidden></p>
+    </form>
+  </section>`;
+}
+
+function bindCourseTests(lesson) {
+  const form = document.querySelector('#lesson-test');
+  const items = window.DERS_TESTLERI[lesson.id];
+  const result = document.querySelector('#test-result');
+  const groups = Array.from(form.querySelectorAll('.test-question'));
+  const clearGroup = group => {
+    const feedback = group.querySelector('.test-feedback');
+    feedback.hidden = true;
+    feedback.textContent = '';
+    for (const label of group.querySelectorAll('.test-option')) label.classList.remove('is-correct', 'is-wrong');
+  };
+  form.addEventListener('submit', event => {
+    event.preventDefault();
+    let correct = 0;
+    let answered = 0;
+    groups.forEach((group, index) => {
+      clearGroup(group);
+      const selected = group.querySelector('input:checked');
+      const feedback = group.querySelector('.test-feedback');
+      if (!selected) {
+        feedback.textContent = 'Bu soruda bir seçenek işaretle.';
+      } else {
+        answered++;
+        const item = items[index];
+        const isCorrect = Number(selected.value) === item.answer;
+        if (isCorrect) correct++;
+        const labels = group.querySelectorAll('.test-option');
+        labels[item.answer].classList.add('is-correct');
+        if (!isCorrect) selected.closest('label').classList.add('is-wrong');
+        feedback.textContent = (isCorrect ? 'Doğru. ' : 'Yanlış. ') + 'Doğru cevap ' + 'ABCDE'[item.answer] + ' — ' + item.choices[item.answer] + '. ' + item.explanation;
+      }
+      feedback.hidden = false;
+    });
+    result.textContent = correct + ' doğru, ' + (answered - correct) + ' yanlış, ' + (items.length - answered) + ' boş.';
+    result.hidden = false;
+  });
+  form.addEventListener('change', event => {
+    clearGroup(event.target.closest('.test-question'));
+    result.hidden = true;
+    result.textContent = '';
+  });
+  form.addEventListener('reset', () => {
+    groups.forEach(clearGroup);
+    result.hidden = true;
+    result.textContent = '';
+  });
+}
+
 function pager(items, current, href, noun) {
   const index = items.indexOf(current);
   const previous = items[index - 1];
@@ -176,6 +244,7 @@ function showLesson(lesson, openDepth) {
         <h2 id="lesson-title" tabindex="-1">${esc(lesson.title)}</h2>
         <div class="body lesson-body">${courseContent(lesson, openDepth)}</div>
         ${coursePractice(lesson)}
+        ${courseTests(lesson)}
         ${related.length ? `<div class="read-foot related"><strong>İlgili çıkmış sorular</strong> ${related.map(q => `<a class="button" href="${questionHref(q)}">${examName(q)} · ${q.number}${arrow}</a>`).join('')}</div>` : ''}
         <details class="sources"><summary>Ders kaynağı</summary><p>${lesson.week ? lesson.week + '.pdf · s. ' + lesson.pages.join('–') : 'Çıkmış vize ve final sorularıyla bağlantılı ek anlatım.'}</p></details>
         ${pager(lessons, lesson, lessonHref, 'ders')}
@@ -183,6 +252,7 @@ function showLesson(lesson, openDepth) {
     </div>`;
 
   const search = document.querySelector('#lesson-search');
+  bindCourseTests(lesson);
   const tree = document.querySelector('#tree');
   const results = document.querySelector('#search-results');
   search.addEventListener('input', () => {
