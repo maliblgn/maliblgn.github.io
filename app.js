@@ -125,11 +125,26 @@ function courseContent(lesson, openDepth) {
   return `<p class="lesson-intro">${esc(lesson.intro)}</p>
     ${lesson.sections.map(([title, ...paragraphs]) => `<section class="lesson-section"><h3>${esc(title)}</h3>${paragraphs.map(paragraph => `<p>${esc(paragraph)}</p>`).join('')}</section>`).join('')}
     <section class="worked-example"><h3>Çözümlü örnek</h3><p>${esc(problem)}</p><ol>${steps.map(step => `<li>${esc(step)}</li>`).join('')}</ol></section>
-    ${lesson.check ? `<details class="self-check"><summary>Kendini dene</summary><p>${esc(lesson.check[0])}</p><details><summary>Yanıtı aç</summary><p>${esc(lesson.check[1])}</p></details></details>` : ''}
     ${details ? `<details class="course-depth" ${openDepth ? 'open' : ''}>
       <summary id="depth-heading">Ayrıntılar ve ek örnekler <span>${details.length} konu</span></summary>
       <div>${details.map(([title, explanation, table]) => `<section class="lesson-section"><h3>${esc(title)}</h3><p>${esc(explanation)}</p>${table ? renderTable(table, title) : ''}</section>`).join('')}</div>
     </details>` : ''}`;
+}
+
+function coursePractice(lesson) {
+  const exercises = window.DERS_SORULARI[lesson.id];
+  return `<section class="lesson-practice" aria-labelledby="practice-heading">
+    <h3 id="practice-heading">Konu sonu soruları</h3>
+    <p class="muted">Önce kendin çöz. Ardından her sorunun yanıtını ve gerekçesini aç.</p>
+    <ol class="practice-list">
+      ${exercises.map((exercise, index) => `<li id="calisma-${index + 1}">
+        <p class="practice-question">${esc(exercise.question)}</p>
+        <details class="practice-solution"><summary>${index + 1}. sorunun yanıtı ve çözümü</summary>
+          ${exercise.solution.map(step => `<p>${esc(step)}</p>`).join('')}
+        </details>
+      </li>`).join('')}
+    </ol>
+  </section>`;
 }
 
 function pager(items, current, href, noun) {
@@ -160,6 +175,7 @@ function showLesson(lesson, openDepth) {
         <span class="tag">${groupByWeek(lesson.week)} · Ders ${weekLessons.indexOf(lesson) + 1} / ${weekLessons.length}</span>
         <h2 id="lesson-title" tabindex="-1">${esc(lesson.title)}</h2>
         <div class="body lesson-body">${courseContent(lesson, openDepth)}</div>
+        ${coursePractice(lesson)}
         ${related.length ? `<div class="read-foot related"><strong>İlgili çıkmış sorular</strong> ${related.map(q => `<a class="button" href="${questionHref(q)}">${examName(q)} · ${q.number}${arrow}</a>`).join('')}</div>` : ''}
         <details class="sources"><summary>Ders kaynağı</summary><p>${lesson.week ? lesson.week + '.pdf · s. ' + lesson.pages.join('–') : 'Çıkmış vize ve final sorularıyla bağlantılı ek anlatım.'}</p></details>
         ${pager(lessons, lesson, lessonHref, 'ders')}
