@@ -309,6 +309,54 @@ window.UNITE_TESTLERI = [
     'İşaret genişletme üst 8 biti 1 yapar. 0xFF92, 16 bit işaretli −110’dur.'),
 ];
 
+// Sabit soru kimlikleriyle eşleştirilir; ünite filtresi ipuçlarını değiştirmez.
+// İpuçları yalnız yöntemi verir; sayısal sonuçlar çözüm kontrolünde kalır.
+const unitFormulaHints = {
+  'unite-2-4': 'Karşılaştırma: aynı işte daha kısa yanıt süresi daha yüksek performanstır; performans ∝ 1/T.',
+  'unite-2-5': 'İş hacmi = tamamlanan iş sayısı / geçen süre; aynı zaman birimiyle karşılaştır.',
+  'unite-2-14': 'Seri aktarım yolunda ideal üst sınır = min(aygıt hızı, bağlantı bant genişliği).',
+  'unite-2-20': 'İşlem kuralı: önce x > 0 koşulunu değerlendir; kalıcı sonuç, gerçek koşulun seçtiği daldan gelir.',
+  'unite-3-1': 'T_CPU = IC × CPI / f; IC: komut sayısı, f: Hz; 1 GHz = 10⁹ Hz.',
+  'unite-3-2': 'Toplam çevrim C = IC × CPI; IC: yürütülen komut sayısı.',
+  'unite-3-3': 'MIPS = f / (CPI × 10⁶); f: Hz.',
+  'unite-3-4': 'Komut/s = f / CPI; f: çevrim/s cinsinden frekans.',
+  'unite-3-5': 'Hızlanma S = T_eski / T_yeni.',
+  'unite-3-6': 'Süre azalması (%) = 100 × (T_eski − T_yeni) / T_eski.',
+  'unite-3-7': 'Süre oranı = T_yeni / T_eski.',
+  'unite-3-8': 'Birim dönüşümü: f_Hz = f_GHz × 10⁹.',
+  'unite-3-11': 'T_CPU = IC × CPI / f; f: Hz; 1 milyon = 10⁶, 1 GHz = 10⁹ Hz.',
+  'unite-3-12': 'f = C / T; C: toplam çevrim, T: saniye; GHz = Hz / 10⁹.',
+  'unite-3-13': 'IC = T_CPU × f / CPI; T_CPU: saniye, f: Hz.',
+  'unite-3-14': 'IC ve CPI sabitken T_yeni / T_eski = f_eski / f_yeni.',
+  'unite-3-15': 'MIPS = f / (CPI × 10⁶); f: Hz.',
+  'unite-3-16': 'MIPS = IC / (T_CPU × 10⁶); IC: komut, T_CPU: saniye.',
+  'unite-3-19': 'S = T_eski / T_yeni; süre azalması (%) = 100 × (T_eski − T_yeni) / T_eski.',
+  'unite-4-5': 'EA = taban yazmacının içeriği + ofset.',
+  'unite-4-12': 'Immediate kuralı: #A için operand = A; bellek okuması yapılmaz.',
+  'unite-4-13': 'Yazmaç adresleme: operand = belirtilen yazmacın içeriği.',
+  'unite-4-14': 'Yazmaç dolaylı: EA = R2; operand = M[EA]. İçerik verilmemişse operandın sayısal değeri çıkarılamaz.',
+  'unite-4-15': 'EA = R2 + ofset; operand = M[EA].',
+  'unite-4-16': 'EA = taban + indeks × ölçek; burada ölçek eleman boyutudur.',
+  'unite-4-17': 'Bellek dolaylı: önce EA = M[A], sonra operand = M[EA].',
+  'unite-5-1': 'İşaretsiz ikili değer = Σ(bᵢ × 2ⁱ); sağdaki bit i = 0. Hedef genişliğe kadar sola sıfır ekle.',
+  'unite-5-2': '−x’in n bit ikinin tümleyeni: +x’i n bitte yaz → bitleri tersle → 1 ekle; düşük n biti tut.',
+  'unite-5-3': 'İkinin tümleyeni: en sol bit 1 ise değer = işaretsiz toplam − 2ⁿ; işaretsiz toplam = Σ(bᵢ × 2ⁱ).',
+  'unite-5-4': 'Hex değeri = Σ(rakam × 16ⁱ); n bit ikinin tümleyeninde en sol bit 1 ise bu değerden 2ⁿ çıkar.',
+  'unite-5-5': 'R = (A + B) mod 2ⁿ; işaretli aralık −2ⁿ⁻¹ … 2ⁿ⁻¹ − 1. Aynı işaretli toplananlar ters işaretli sonuç verirse overflow vardır.',
+  'unite-5-6': 'R = (A + B) mod 2ⁿ; R ≥ 2ⁿ⁻¹ ise işaretli değer R − 2ⁿ. Overflow: aynı işaretli toplananlar, ters işaretli sonuç.',
+  'unite-5-7': 'R = (A + B) mod 2ⁿ; R ≥ 2ⁿ⁻¹ ise işaretli değer R − 2ⁿ. Farklı işaretli iki sayının toplamında işaretli taşma olmaz.',
+  'unite-5-8': 'A − B = A + ~B + 1; düşük n biti tut. A ve özgün B farklı işaretli, sonuç A’dan farklı işaretliyse overflow vardır.',
+  'unite-5-9': 'U = A_işaretsiz + B_işaretsiz; R = U mod 2ⁿ; C = ⌊U / 2ⁿ⌋. V: aynı işaretli operandların ters işaretli sonuç vermesi.',
+  'unite-5-10': 'U = A_işaretsiz + B_işaretsiz; R = U mod 2ⁿ; C = ⌊U / 2ⁿ⌋. V: aynı işaretli operandların ters işaretli sonuç vermesi.',
+  'unite-5-11': 'U = A_işaretsiz + B_işaretsiz; R = U mod 2ⁿ; C = ⌊U / 2ⁿ⌋. V: aynı işaretli operandların ters işaretli sonuç vermesi.',
+  'unite-5-12': 'U = A_işaretsiz + B_işaretsiz; R = U mod 2ⁿ; C = ⌊U / 2ⁿ⌋. V: aynı işaretli operandların ters işaretli sonuç vermesi.',
+  'unite-5-16': 'İşaret genişletme: n bitten m bite geçerken sol tarafa m − n tane özgün işaret biti kopyala.',
+  'unite-5-17': 'Sıfır genişletmede alt bitlerin işaretsiz toplamı korunur: değer = Σ(bᵢ × 2ⁱ). İşareti yeni genişlikteki en sol bit belirler.',
+  'unite-5-19': 'n bit ikinin tümleyeni aralığı: −2ⁿ⁻¹ ≤ sonuç ≤ 2ⁿ⁻¹ − 1. Matematiksel sonucu bu aralıkla karşılaştır.',
+  'unite-5-20': 'İşaret genişletme: işaret bitini yeni üst bitlere kopyala; her 4 bit bir hex rakamıdır.',
+};
+
 window.UNITE_TESTLERI.forEach((item, index) => {
   item.id = 'unite-' + item.unit + '-' + (index % 20 + 1);
+  item.formulaHint = unitFormulaHints[item.id] ?? null;
 });

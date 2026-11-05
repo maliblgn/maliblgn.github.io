@@ -16,7 +16,7 @@ const weeks = {
 const weekOrder = [1, 2, 3, 4, 5, 0];
 const lessonsByWeek = new Map(weekOrder.map(week => [week, lessons.filter(lesson => lesson.week === week)]));
 const lessonByLegacyId = new Map();
-const state = { exam: '', topic: '', mobileTab: 'soru' };
+const state = { exam: '', topic: '', mobileTab: 'soru', conceptQuery: '' };
 const unitAnswers = new Map();
 
 for (const lesson of lessons.filter(item => item.week)) {
@@ -69,6 +69,7 @@ function home() {
     <section aria-labelledby="course-title">
       <div class="section-head"><div><p class="eyebrow">Ders yolu</p><h2 id="course-title">Beş haftada dersin temelleri</h2></div><p>${lessons.filter(lesson => lesson.week).length} konu dersi</p></div>
       <div class="weeks">${cards.join('')}</div>
+      <div class="strip"><div><strong>Kavram Özeti · Ünite ünite hızlı tekrar</strong><p>Terimleri kısa tanımlar, karşılaştırma tabloları ve akış şemalarıyla hatırla.</p></div><a class="button primary" href="#kavramlar">Kavram özetini aç ${arrow}</a></div>
       <div class="strip"><div><strong>Slayt sonu genel testi · 100 soru</strong><p>Her üniteden 20 çoktan seçmeli soruyla sunum sonundaki uygulamaları çalış.</p></div><a class="button primary" href="#genel-test">Genel testi aç ${arrow}</a></div>
       <div class="strip"><div><strong>Çıkmış sorular için ek konu anlatımları</strong><p>Flynn, donanım katmanları ve boru hattı hesabı gibi eski sınav başlıklarını da çalış.</p></div><a class="button" href="${lessonHref(lessonsByWeek.get(0)[0])}">Ek konuları aç ${arrow}</a></div>
     </section>
@@ -91,6 +92,65 @@ function buildTree(current) {
 function renderTable(rows, label) {
   const [head, ...body] = rows;
   return `<div class="table-wrap" tabindex="0" role="region" aria-label="${esc(label)}"><table><thead><tr>${head.map(cell => `<th scope="col">${esc(cell)}</th>`).join('')}</tr></thead><tbody>${body.map(row => `<tr>${row.map(cell => `<td>${esc(cell)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+}
+
+function conceptCard(item, query) {
+  const lesson = lessonById.get(item.lessonId);
+  const contextMatches = fold(lesson.title).includes(query);
+  let count = 0;
+  const groups = item.groups.map((terms, index) => {
+    const title = lesson.sections[index][0];
+    const groupMatches = contextMatches || fold(title).includes(query);
+    const matching = terms.filter(term => groupMatches || fold(term.join(' ')).includes(query));
+    count += matching.length;
+    return matching.length ? `<section class="concept-group"><h4>${esc(title)}</h4>
+      <dl>${matching.map(([term, definition, cue]) => `<div class="concept-term"><dt>${esc(term)}</dt><dd>${esc(definition)}${cue ? `<span class="concept-cue">${esc(cue)}</span>` : ''}</dd></div>`).join('')}</dl>
+    </section>` : '';
+  }).join('');
+  if (!count) return { html: '', count: 0 };
+  const flow = !query && item.flow;
+  const table = !query && item.table;
+  return { count, html: `<article class="panel concept-card" aria-labelledby="concept-${lesson.id}">
+    <div class="concept-heading"><div><p class="eyebrow">${groupByWeek(lesson.week)} · ${count} terim açıklaması</p><h3 id="concept-${lesson.id}">${esc(lesson.title)}</h3></div><a class="button" href="${lessonHref(lesson)}">Dersi aç ${arrow}</a></div>
+    <div class="concept-groups">${groups}</div>
+    ${flow ? `<figure class="concept-flow"><figcaption>${esc(flow[0])}</figcaption><ol>${flow[1].map(step => `<li>${esc(step)}</li>`).join('')}</ol>${flow[2] ? `<p>${esc(flow[2])}</p>` : ''}</figure>` : ''}
+    ${table ? `<section class="concept-comparison"><h4>${esc(table[0])}</h4>${renderTable(table[1], table[0])}</section>` : ''}
+  </article>` };
+}
+
+function showConcepts(selection = '1') {
+  const chosen = ['0','1','2','3','4','5','tumu'].includes(selection) ? selection : '1';
+  const selectedWeeks = chosen === 'tumu' ? weekOrder : [Number(chosen)];
+  main.innerHTML = pageHead('Terimler · Bağlantılar · Formüller', 'Kavram Özeti', 'Üniteyi seç; derslerin alt başlıklarındaki kavramları kısa tanımlarla hatırla. Tablolar farkları, akışlar işlem sırasını gösterir.') + `
+    <div class="panel concept-tools">
+      <nav class="concept-units" aria-label="Kavram özeti üniteleri">${weekOrder.map(week => `<a class="button" href="#kavramlar/${week}" ${chosen === String(week) ? 'aria-current="page"' : ''}>${week ? week + '. Ünite' : 'Ek vize'}</a>`).join('')}<a class="button" href="#kavramlar/tumu" ${chosen === 'tumu' ? 'aria-current="page"' : ''}>Tümü</a></nav>
+      <div class="concept-search"><div><label for="concept-search">Seçili bölümde terim ara</label><input id="concept-search" type="search" placeholder="Örn. yazmaç, CPI, overflow" value="${esc(state.conceptQuery)}" aria-controls="concept-results"></div><button class="button" id="concept-clear" type="button">Aramayı temizle</button></div>
+      <p class="muted" id="concept-count" role="status" aria-live="polite"></p>
+    </div>
+    <div id="concept-results" class="concept-results"></div>`;
+  const input = document.querySelector('#concept-search');
+  const update = () => {
+    state.conceptQuery = input.value;
+    const query = fold(input.value.trim());
+    let termCount = 0;
+    let lessonCount = 0;
+    const html = selectedWeeks.map(week => {
+      const cards = window.KAVRAM_OZETLERI.filter(item => lessonById.get(item.lessonId).week === week).map(item => conceptCard(item, query));
+      const matches = cards.filter(card => card.count);
+      termCount += matches.reduce((sum, card) => sum + card.count, 0);
+      lessonCount += matches.length;
+      return matches.length ? `<section class="concept-unit" aria-labelledby="concept-unit-${week}"><div class="concept-unit-heading"><span class="week-number">${week ? 'ÜNİTE 0' + week : 'EK VİZE'}</span><h2 id="concept-unit-${week}">${esc(weeks[week][0])}</h2></div>${matches.map(card => card.html).join('')}</section>` : '';
+    }).join('');
+    document.querySelector('#concept-results').innerHTML = html || '<p class="panel empty">Bu bölümde eşleşen terim yok. Aramayı kısaltabilir veya “Tümü” bölümünde arayabilirsin.</p>';
+    document.querySelector('#concept-count').textContent = `${lessonCount} ders · ${termCount} terim açıklaması${query ? ' · Arama sonuçları' : ' · Terimler ders bağlamına göre gruplanır.'}`;
+  };
+  input.addEventListener('input', update);
+  document.querySelector('#concept-clear').addEventListener('click', () => {
+    input.value = '';
+    update();
+    input.focus();
+  });
+  update();
 }
 
 function examNoteContent(lesson) {
@@ -153,6 +213,7 @@ function quizFields(items) {
   return items.map((item, questionIndex) => `${item.unit && item.unit !== items[questionIndex - 1]?.unit ? `<h2 class="unit-heading">${item.unit}. Ünite · ${esc(weeks[item.unit][0])}</h2>` : ''}
       <fieldset class="test-question" data-question="${questionIndex}">
         <legend>${questionIndex + 1}. ${esc(item.question)}</legend>
+        ${item.formulaHint ? `<p class="formula-hint">(${esc(item.formulaHint)})</p>` : ''}
         ${item.unit ? `<p class="muted quiz-source">Kaynak kazanım · ${item.unit}.pdf, sayfa ${item.page} · Test uyarlaması</p>` : ''}
         <div class="test-options">${item.choices.map((choice, choiceIndex) => `<label class="test-option">
           <input type="radio" name="test-${questionIndex}" value="${choiceIndex}">
@@ -411,8 +472,8 @@ function showSources() {
 function render(navigation = false) {
   const [screen, id, part] = location.hash.slice(1).split('/');
   const openDepth = screen === 'konu' && part === 'ayrinti';
-  const current = { konu: 'lessons', soru: 'exams', 'genel-test': 'general', kaynaklar: null }[screen] ?? (screen === 'kaynaklar' ? null : 'home');
-  for (const name of ['home', 'lessons', 'exams', 'general']) {
+  const current = { konu: 'lessons', soru: 'exams', kavramlar: 'summary', 'genel-test': 'general', kaynaklar: null }[screen] ?? (screen === 'kaynaklar' ? null : 'home');
+  for (const name of ['home', 'lessons', 'summary', 'exams', 'general']) {
     const link = document.querySelector('#nav-' + name);
     if (name === current) link.setAttribute('aria-current', 'page');
     else link.removeAttribute('aria-current');
@@ -426,6 +487,7 @@ function render(navigation = false) {
     }
     showQuestion(requested);
   } else if (screen === 'genel-test') showUnitTest(id);
+  else if (screen === 'kavramlar') showConcepts(id);
   else if (screen === 'kaynaklar') showSources();
   else home();
 
