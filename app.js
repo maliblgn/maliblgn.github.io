@@ -17,6 +17,7 @@ const weekOrder = [1, 2, 3, 4, 5, 0];
 const lessonsByWeek = new Map(weekOrder.map(week => [week, lessons.filter(lesson => lesson.week === week)]));
 const lessonByLegacyId = new Map();
 const state = { exam: '', topic: '', mobileTab: 'soru' };
+const unitAnswers = new Map();
 
 for (const lesson of lessons.filter(item => item.week)) {
   const [firstPage, lastPage] = lesson.pages;
@@ -68,6 +69,7 @@ function home() {
     <section aria-labelledby="course-title">
       <div class="section-head"><div><p class="eyebrow">Ders yolu</p><h2 id="course-title">Beş haftada dersin temelleri</h2></div><p>${lessons.filter(lesson => lesson.week).length} konu dersi</p></div>
       <div class="weeks">${cards.join('')}</div>
+      <div class="strip"><div><strong>Slayt sonu genel testi · 100 soru</strong><p>Her üniteden 20 çoktan seçmeli soruyla sunum sonundaki uygulamaları çalış.</p></div><a class="button primary" href="#genel-test">Genel testi aç ${arrow}</a></div>
       <div class="strip"><div><strong>Çıkmış sorular için ek konu anlatımları</strong><p>Flynn, donanım katmanları ve boru hattı hesabı gibi eski sınav başlıklarını da çalış.</p></div><a class="button" href="${lessonHref(lessonsByWeek.get(0)[0])}">Ek konuları aç ${arrow}</a></div>
     </section>
     <section aria-labelledby="exam-title">
@@ -147,31 +149,42 @@ function coursePractice(lesson) {
   </section>`;
 }
 
-function courseTests(lesson) {
-  const items = window.DERS_TESTLERI[lesson.id];
-  return `<section class="lesson-tests" aria-labelledby="test-heading">
-    <h3 id="test-heading">Konu testi · 5 soru</h3>
-    <p class="muted">Her soruda tek doğru seçenek var. Şıklarını işaretle, ardından cevaplarını kontrol et.</p>
-    <form id="lesson-test" data-lesson-id="${esc(lesson.id)}">
-      ${items.map((item, questionIndex) => `<fieldset class="test-question" data-question="${questionIndex}">
+function quizFields(items) {
+  return items.map((item, questionIndex) => `${item.unit && item.unit !== items[questionIndex - 1]?.unit ? `<h2 class="unit-heading">${item.unit}. Ünite · ${esc(weeks[item.unit][0])}</h2>` : ''}
+      <fieldset class="test-question" data-question="${questionIndex}">
         <legend>${questionIndex + 1}. ${esc(item.question)}</legend>
+        ${item.unit ? `<p class="muted quiz-source">Kaynak kazanım · ${item.unit}.pdf, sayfa ${item.page} · Test uyarlaması</p>` : ''}
         <div class="test-options">${item.choices.map((choice, choiceIndex) => `<label class="test-option">
           <input type="radio" name="test-${questionIndex}" value="${choiceIndex}">
           <span><b>${'ABCDE'[choiceIndex]}</b> ${esc(choice)}</span>
         </label>`).join('')}</div>
         <div class="test-feedback" role="status" hidden></div>
-      </fieldset>`).join('')}
+      </fieldset>`).join('');
+}
+
+function courseTests(lesson) {
+  const items = window.DERS_TESTLERI[lesson.id];
+  return `<section class="lesson-tests" aria-labelledby="test-heading">
+    <h3 id="test-heading">Konu testi · 5 soru</h3>
+    <p class="muted">Her soruda tek doğru seçenek var. Şıklarını işaretle, ardından cevaplarını kontrol et.</p>
+    <form id="lesson-test">
+      ${quizFields(items)}
       <div class="actions"><button class="button primary" type="submit">Cevapları kontrol et</button><button class="button" type="reset">Testi sıfırla</button></div>
       <p id="test-result" class="test-result" role="status" hidden></p>
     </form>
   </section>`;
 }
 
-function bindCourseTests(lesson) {
-  const form = document.querySelector('#lesson-test');
-  const items = window.DERS_TESTLERI[lesson.id];
-  const result = document.querySelector('#test-result');
+function bindTestForm(items, formId, answers) {
+  const form = document.querySelector('#' + formId);
+  const result = form.querySelector('.test-result');
   const groups = Array.from(form.querySelectorAll('.test-question'));
+  if (answers) {
+    groups.forEach((group, index) => {
+      const value = answers.get(items[index].id);
+      if (value !== undefined) group.querySelector('input[value="' + value + '"]').checked = true;
+    });
+  }
   const clearGroup = group => {
     const feedback = group.querySelector('.test-feedback');
     feedback.hidden = true;
@@ -202,17 +215,45 @@ function bindCourseTests(lesson) {
     });
     result.textContent = correct + ' doğru, ' + (answered - correct) + ' yanlış, ' + (items.length - answered) + ' boş.';
     result.hidden = false;
+    result.scrollIntoView({ block: 'center' });
   });
   form.addEventListener('change', event => {
-    clearGroup(event.target.closest('.test-question'));
+    const group = event.target.closest('.test-question');
+    clearGroup(group);
+    if (answers) answers.set(items[Number(group.dataset.question)].id, Number(event.target.value));
     result.hidden = true;
     result.textContent = '';
   });
   form.addEventListener('reset', () => {
     groups.forEach(clearGroup);
+    if (answers) items.forEach(item => answers.delete(item.id));
     result.hidden = true;
     result.textContent = '';
   });
+}
+
+function showUnitTest(selection = 'all') {
+  const unit = ['1', '2', '3', '4', '5'].includes(selection) ? Number(selection) : null;
+  const items = window.UNITE_TESTLERI.filter(item => !unit || item.unit === unit);
+  main.innerHTML = pageHead('Sunum sonu uygulamalarından', 'Slayt Sonu Genel Testi', '5 ünite · Her üniteden 20 soru · Toplam 100 çoktan seçmeli soru') + `
+    <div class="panel general-intro">
+      <p>Bu test, beş sunumun sonundaki uygulama ve tartışma sorularının çoktan seçmeli uyarlamalarını ve aynı kazanımlardan üretilmiş varyasyonlarını içerir. Kaynak numaraları PDF’nin fiziksel sayfalarıdır.</p>
+      <label for="unit-select">Çözülecek bölüm</label>
+      <select id="unit-select"><option value="all" ${unit ? '' : 'selected'}>Tüm üniteler · 100 soru</option>${[1,2,3,4,5].map(week => `<option value="${week}" ${unit === week ? 'selected' : ''}>${week}. Ünite · 20 soru</option>`).join('')}</select>
+      <p class="muted">Ünite geçişlerinde cevapların bu sayfa açık kaldığı sürece korunur. Her soruda tek doğru cevap bulunur.</p>
+      <div class="actions"><button class="button primary" type="submit" form="unit-test">Cevapları kontrol et</button><button class="button" type="reset" form="unit-test">Seçili testi sıfırla</button></div>
+    </div>
+    <section class="panel reading general-quiz" aria-label="Genel test soruları">
+      <form id="unit-test">
+        <p class="test-result" role="status" hidden></p>
+        ${quizFields(items)}
+        <div class="actions"><button class="button primary" type="submit">Sonucu kontrol et</button><button class="button" type="reset">Seçili testi sıfırla</button></div>
+      </form>
+    </section>`;
+  document.querySelector('#unit-select').addEventListener('change', event => {
+    location.hash = '#genel-test/' + event.target.value;
+  });
+  bindTestForm(items, 'unit-test', unitAnswers);
 }
 
 function pager(items, current, href, noun) {
@@ -252,7 +293,7 @@ function showLesson(lesson, openDepth) {
     </div>`;
 
   const search = document.querySelector('#lesson-search');
-  bindCourseTests(lesson);
+  bindTestForm(window.DERS_TESTLERI[lesson.id], 'lesson-test');
   const tree = document.querySelector('#tree');
   const results = document.querySelector('#search-results');
   search.addEventListener('input', () => {
@@ -370,8 +411,8 @@ function showSources() {
 function render(navigation = false) {
   const [screen, id, part] = location.hash.slice(1).split('/');
   const openDepth = screen === 'konu' && part === 'ayrinti';
-  const current = { konu: 'lessons', soru: 'exams', kaynaklar: null }[screen] ?? (screen === 'kaynaklar' ? null : 'home');
-  for (const name of ['home', 'lessons', 'exams']) {
+  const current = { konu: 'lessons', soru: 'exams', 'genel-test': 'general', kaynaklar: null }[screen] ?? (screen === 'kaynaklar' ? null : 'home');
+  for (const name of ['home', 'lessons', 'exams', 'general']) {
     const link = document.querySelector('#nav-' + name);
     if (name === current) link.setAttribute('aria-current', 'page');
     else link.removeAttribute('aria-current');
@@ -384,7 +425,8 @@ function render(navigation = false) {
       state.topic = '';
     }
     showQuestion(requested);
-  } else if (screen === 'kaynaklar') showSources();
+  } else if (screen === 'genel-test') showUnitTest(id);
+  else if (screen === 'kaynaklar') showSources();
   else home();
 
   const depthHeading = openDepth && document.querySelector('#depth-heading');

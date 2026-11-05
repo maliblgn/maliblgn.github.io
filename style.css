@@ -123,6 +123,13 @@ input[type=search], select { border: 1px solid #b8c7cf; border-radius: 8px; back
 .test-option.is-wrong { background: #fff0ed; border-color: #bb5a4a; }
 .test-feedback { padding: .75rem .85rem; margin-top: .5rem; border-left: 3px solid var(--accent); background: #f1f7f5; border-radius: 4px; line-height: 1.65; }
 .test-result { font-weight: 750; color: var(--accent); padding: .75rem 0 0; }
+.general-intro { padding: 1rem 1.2rem; margin-bottom: 1rem; }
+.general-intro > p:first-child { margin-top: 0; }
+.general-intro label { display: block; font-weight: 700; margin-bottom: .3rem; }
+.general-intro select { max-width: 390px; }
+.general-quiz { max-width: 960px; margin-inline: auto; }
+.general-quiz .unit-heading { font-size: clamp(1.3rem,2.5vw,1.8rem); margin: 1.5rem 0 1.3rem; padding-bottom: .6rem; border-bottom: 1px solid var(--border); }
+.quiz-source { margin: 0 0 .65rem; font-size: .78rem; }
 .body p { margin: .7em 0; overflow-wrap: anywhere; }
 .body ul { margin: .55em 0 1em; padding-left: 1.25rem; }
 .body li { margin-block: .32rem; }
@@ -163,6 +170,8 @@ tr:nth-child(even) td { background: #f6f9fa; }
 .audit h2 { margin-top: 1.5rem; }
 .audit details { margin-block: 10px; }
 @media (max-width: 1060px) {
+  .bar { flex-wrap: wrap; padding-block: 11px; }
+  .nav { flex-wrap: wrap; }
   .weeks { grid-template-columns: repeat(3, 1fr); }
   .week-card { min-height: 155px; }
 }
